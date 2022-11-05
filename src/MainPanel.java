@@ -219,10 +219,10 @@ public class MainPanel extends JPanel {
 
     private void changeText(String text) {
         notNumbers.clear();
-        String[] words = text.split("[\s\n]");
+        String[] words = text.split(" ");
 
         for (int i = 0; i < words.length; i++) {
-            String trimmedWord = words[i].trim();
+            String trimmedWord = words[i].strip();
 
             if (trimmedWord.isBlank()) {
                 continue;
@@ -261,6 +261,7 @@ public class MainPanel extends JPanel {
         }
         changedTextBox.setText(stringBuilder.toString().trim());
 
+        notNumbers.replaceAll(s -> s.replaceAll("\n", "\\\\n"));
         System.out.println("Words that failed the number parse: " + notNumbers);
     }
 
