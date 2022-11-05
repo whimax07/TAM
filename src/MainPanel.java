@@ -201,7 +201,7 @@ public class MainPanel extends JPanel {
         if (opNumber.isEmpty()) return;
 
         offset = opNumber.get();
-        changeText(originalTextBox.getText());
+        changeText(originalTextBox.getText(), " ");
     }
 
     private void originalTextChanged(DocumentEvent event) {
@@ -214,15 +214,24 @@ public class MainPanel extends JPanel {
             ex.printStackTrace();
         }
 
-        changeText(text);
+        notNumbers.clear();
+
+        var newText = changeText(text, " ");
+        changedTextBox.setText(newText);
+
+        System.out.println("Words that failed the number parse: " + notNumbers);
     }
 
-    private void changeText(String text) {
-        notNumbers.clear();
-        String[] words = text.split(" ");
+    private String changeText(String text, String splitToken) {
+        String[] words = text.split(splitToken);
 
         for (int i = 0; i < words.length; i++) {
             String trimmedWord = words[i].strip();
+
+            if (trimmedWord.contains("\n")) {
+                words[i] = changeText(trimmedWord, "\n");
+                continue;
+            }
 
             if (trimmedWord.isBlank()) {
                 continue;
@@ -242,12 +251,9 @@ public class MainPanel extends JPanel {
 
         StringBuilder stringBuilder = new StringBuilder();
         for (String word : words) {
-            stringBuilder.append(word).append(" ");
+            stringBuilder.append(word).append(splitToken);
         }
-        changedTextBox.setText(stringBuilder.toString().trim());
-
-        notNumbers.replaceAll(s -> s.replaceAll("\n", "\\\\n"));
-        System.out.println("Words that failed the number parse: " + notNumbers);
+        return stringBuilder.toString().trim();
     }
 
     private String rewriteWord(String original, long number) {
