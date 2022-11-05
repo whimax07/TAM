@@ -235,24 +235,9 @@ public class MainPanel extends JPanel {
 
             var opNumber = getNumberFromWord(trimmedWord);
             if (opNumber.isEmpty()) continue;
-            long number = opNumber.get();
 
-            number += offset;
-            String changed = "0x" + Long.toHexString(number);
-
-            String original = words[i];
-
-            if (changed.length() < original.length()) {
-                StringBuilder stringBuilder = new StringBuilder(changed);
-                do {
-                    stringBuilder.insert(2, "0");
-                } while (stringBuilder.length() < original.length());
-
-                changed = stringBuilder.toString();
-                System.out.println("In the format kepper: " + changed);
-            }
-
-            words[i] = changed;
+            long number = opNumber.get() + offset;
+            words[i] = rewriteWord(words[i], number);
         }
 
         StringBuilder stringBuilder = new StringBuilder();
@@ -263,6 +248,38 @@ public class MainPanel extends JPanel {
 
         notNumbers.replaceAll(s -> s.replaceAll("\n", "\\\\n"));
         System.out.println("Words that failed the number parse: " + notNumbers);
+    }
+
+    private String rewriteWord(String original, long number) {
+        E_Literal literal;
+
+        if (original.startsWith("0x") || original.startsWith("0X")) {
+            literal = E_Literal.HEX;
+        } else if (original.startsWith("0b") || original.startsWith("0B")) {
+            literal = E_Literal.BIN;
+        } else if (original.startsWith("0d") || original.startsWith("0D")) {
+            literal = E_Literal.DEC;
+        } else {
+            literal = noPrefixLitral;
+        }
+
+        String changed = switch (literal) {
+            case HEX -> "0x" + Long.toHexString(number);
+            case BIN -> "0b" + Long.toBinaryString(number);
+            case DEC -> Long.toString(number);
+        };
+
+        if (literal != E_Literal.DEC && changed.length() < original.length()) {
+            StringBuilder stringBuilder = new StringBuilder(changed);
+            do {
+                stringBuilder.insert(2, "0");
+            } while (stringBuilder.length() < original.length());
+
+            changed = stringBuilder.toString();
+            System.out.println("In the word rewriter: " + changed);
+        }
+
+        return changed;
     }
 
     private Optional<Long> getNumberFromWord(String trimmedWord) {
