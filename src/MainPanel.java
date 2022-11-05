@@ -19,6 +19,7 @@ import java.util.function.Function;
 
 public class MainPanel extends JPanel {
 
+    @SuppressWarnings("FieldCanBeLocal")
     private JTextField offsetEntry;
 
     private JButton exchangeClipboardButton;
@@ -29,7 +30,7 @@ public class MainPanel extends JPanel {
 
     private long offset = 0;
 
-    private E_Literal noPrefixLitral = E_Literal.HEX;
+    private final E_Literal noPrefixLiteral = E_Literal.HEX;
 
     private final ArrayList<String> notNumbers = new ArrayList<>();
 
@@ -94,6 +95,8 @@ public class MainPanel extends JPanel {
         final LineBorder hoverBoarder = new LineBorder(new Color(124, 197, 246), 2);
 
         ButtonModel model = exchangeClipboardButton.getModel();
+
+        //noinspection Convert2Lambda
         model.addChangeListener(new ChangeListener() {
             @Override
             public void stateChanged(ChangeEvent e) {
@@ -266,7 +269,7 @@ public class MainPanel extends JPanel {
         } else if (original.startsWith("0d") || original.startsWith("0D")) {
             literal = E_Literal.DEC;
         } else {
-            literal = noPrefixLitral;
+            literal = noPrefixLiteral;
         }
 
         String changed = switch (literal) {
@@ -320,7 +323,7 @@ public class MainPanel extends JPanel {
         }
 
         // `trimmedWord` does not have a prefix so use the default.
-        return switch (noPrefixLitral) {
+        return switch (noPrefixLiteral) {
             case HEX -> makeNumber.apply(checkHex, 16, trimmedWord);
             case BIN -> makeNumber.apply(checkBin, 2, trimmedWord);
             case DEC -> makeNumber.apply(checkDec, 10, trimmedWord);
