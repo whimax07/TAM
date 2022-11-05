@@ -281,8 +281,7 @@ public class MainPanel extends JPanel {
 
         Function<String, Boolean> checkHex = in -> in.startsWith("0x") || in.startsWith("0X");
         Function<String, Boolean> checkBin = in -> in.startsWith("0b") || in.startsWith("0B");
-        Function<String, Boolean> checkDec =
-                in -> in.startsWith("0d") || in.startsWith("0D") || in.startsWith("d") || in.startsWith("D");
+        Function<String, Boolean> checkDec = in -> in.startsWith("0d") || in.startsWith("0D");
 
         // If `trimmedWord` has a literal prefix parse it as such.
         if (checkHex.apply(trimmedWord)) {
