@@ -13,6 +13,9 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.ActionEvent;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Optional;
+import java.util.function.Function;
 
 public class MainPanel extends JPanel {
 
@@ -25,6 +28,10 @@ public class MainPanel extends JPanel {
     private JTextArea changedTextBox;
 
     private long offset = 0;
+
+    private E_Literal noPrefixLitral = E_Literal.HEX;
+
+    private final ArrayList<String> notNumbers = new ArrayList<>();
 
 
 
@@ -97,8 +104,6 @@ public class MainPanel extends JPanel {
                 }
             }
         });
-
-
 
         exchangeClipboardButton.addActionListener(new AbstractAction() {
             @Override
@@ -192,18 +197,10 @@ public class MainPanel extends JPanel {
             ex.printStackTrace();
         }
 
-        while (text.startsWith("0x") || text.startsWith("0X")) {
-            text = text.substring(2);
-        }
+        var opNumber = getNumberFromWord(text);
+        if (opNumber.isEmpty()) return;
 
-        long number;
-        try {
-            number = Long.parseLong(text, 16);
-        } catch (NumberFormatException e) {
-            return;
-        }
-
-        offset = number;
+        offset = opNumber.get();
         changeText(originalTextBox.getText());
     }
 
@@ -221,26 +218,24 @@ public class MainPanel extends JPanel {
     }
 
     private void changeText(String text) {
-        String[] words = text.split(" ");
+        notNumbers.clear();
+        String[] words = text.split("[\s\n]");
 
         for (int i = 0; i < words.length; i++) {
-            long number;
+            String trimmedWord = words[i].trim();
 
-            String trimmedWord = words[i];
+            if (trimmedWord.isBlank()) {
+                continue;
+            }
 
             if (trimmedWord.equals("a")) {
+                notNumbers.add("a");
                 continue;
             }
 
-            while (trimmedWord.startsWith("0x") || trimmedWord.startsWith("0X")) {
-                trimmedWord = trimmedWord.substring(2);
-            }
-
-            try {
-                number = Long.parseLong(trimmedWord, 16);
-            } catch (NumberFormatException e) {
-                continue;
-            }
+            var opNumber = getNumberFromWord(trimmedWord);
+            if (opNumber.isEmpty()) continue;
+            long number = opNumber.get();
 
             number += offset;
             String changed = "0x" + Long.toHexString(number);
@@ -265,6 +260,60 @@ public class MainPanel extends JPanel {
             stringBuilder.append(word).append(" ");
         }
         changedTextBox.setText(stringBuilder.toString().trim());
+
+        System.out.println("Words that failed the number parse: " + notNumbers);
+    }
+
+    private Optional<Long> getNumberFromWord(String trimmedWord) {
+        MakeNumber makeNumber = (hasPrefix, base, input) -> {
+            while (hasPrefix.apply(input)) {
+                input = input.substring(2);
+            }
+
+            try {
+                return Optional.of(Long.parseLong(input, base));
+            } catch (NumberFormatException e) {
+                notNumbers.add(input);
+                return Optional.empty();
+            }
+        };
+
+        Function<String, Boolean> checkHex = in -> in.startsWith("0x") || in.startsWith("0X");
+        Function<String, Boolean> checkBin = in -> in.startsWith("0b") || in.startsWith("0B");
+        Function<String, Boolean> checkDec =
+                in -> in.startsWith("0d") || in.startsWith("0D") || in.startsWith("d") || in.startsWith("D");
+
+        // If `trimmedWord` has a literal prefix parse it as such.
+        if (checkHex.apply(trimmedWord)) {
+            return makeNumber.apply(checkHex, 16, trimmedWord);
+        }
+
+        if (checkBin.apply(trimmedWord)) {
+            return makeNumber.apply(checkBin, 2, trimmedWord);
+        }
+
+        if (checkDec.apply(trimmedWord)) {
+            return makeNumber.apply(checkDec, 10, trimmedWord);
+        }
+
+        // `trimmedWord` does not have a prefix so use the default.
+        return switch (noPrefixLitral) {
+            case HEX -> makeNumber.apply(checkHex, 16, trimmedWord);
+            case BIN -> makeNumber.apply(checkBin, 2, trimmedWord);
+            case DEC -> makeNumber.apply(checkDec, 10, trimmedWord);
+        };
+    }
+
+
+
+    private enum E_Literal {
+        HEX,
+        DEC,
+        BIN
+    }
+
+    private interface MakeNumber {
+        Optional<Long> apply(Function<String, Boolean> checkPrefix, int base, String input);
     }
 
 }
