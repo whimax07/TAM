@@ -408,7 +408,6 @@ public class MainPanel extends JPanel {
         @Override
         protected void paintTrack(Graphics g, JComponent c, Rectangle trackBounds) {
             Graphics2D graphics2D = (Graphics2D) g.create();
-//            graphics2D.setColor(new Color(190, 190, 190));
             graphics2D.setColor(Color.black);
             graphics2D.fillRect(trackBounds.x, trackBounds.y, trackBounds.width, trackBounds.height);
             graphics2D.dispose();
