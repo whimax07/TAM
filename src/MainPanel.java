@@ -4,6 +4,7 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.plaf.basic.BasicScrollBarUI;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import java.awt.*;
@@ -16,6 +17,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 
 public class MainPanel extends JPanel {
 
@@ -24,7 +26,11 @@ public class MainPanel extends JPanel {
 
     private JButton exchangeClipboardButton;
 
+    private JScrollPane originalTextWrapper;
+
     private JTextArea originalTextBox;
+
+    private JScrollPane changedTextWrapper;
 
     private JTextArea changedTextBox;
 
@@ -142,7 +148,7 @@ public class MainPanel extends JPanel {
         originalTextBox = new JTextArea();
         originalTextBox.setBackground(Color.BLACK);
         originalTextBox.setForeground(Color.LIGHT_GRAY);
-        originalTextBox.setBorder(new LineBorder(Color.WHITE, 2 ));
+        originalTextBox.setBorder(null);
         originalTextBox.setCaretColor(new Color(171, 171, 255));
         originalTextBox.setFont(new Font("Courier New", Font.PLAIN, 16));
 
@@ -163,29 +169,37 @@ public class MainPanel extends JPanel {
             }
         });
 
+        originalTextWrapper = new JScrollPane(originalTextBox);
+        originalTextWrapper.setBorder(new LineBorder(Color.WHITE, 2));
+        originalTextWrapper.getHorizontalScrollBar().setBackground(Color.darkGray);
+        var uis = originalTextWrapper.getHorizontalScrollBar().getUI();
+
         var constraints = new GridBagConstraints();
         constraints.fill = GridBagConstraints.BOTH;
         constraints.weighty = 1.0;
         constraints.gridy = 2;
 
-        this.add(originalTextBox, constraints);
+        this.add(originalTextWrapper, constraints);
     }
 
     private void addChangedTextBox() {
         changedTextBox = new JTextArea();
         changedTextBox.setBackground(Color.BLACK);
         changedTextBox.setForeground(Color.LIGHT_GRAY);
-        changedTextBox.setBorder(new LineBorder(Color.WHITE, 2 ));
+        changedTextBox.setBorder(null);
         changedTextBox.setCaretColor(new Color(146, 255, 92));
         changedTextBox.setFont(new Font("Courier New", Font.PLAIN, 16));
         changedTextBox.setEditable(false);
+
+        changedTextWrapper = new JScrollPane(changedTextBox);
+        changedTextWrapper.setBorder(new LineBorder(Color.WHITE, 2));
 
         var constraints = new GridBagConstraints();
         constraints.fill = GridBagConstraints.BOTH;
         constraints.weighty = 1.0;
         constraints.gridy = 3;
 
-        this.add(changedTextBox, constraints);
+        this.add(changedTextWrapper, constraints);
     }
 
 
@@ -226,6 +240,7 @@ public class MainPanel extends JPanel {
     }
 
     private String changeText(String text, String splitToken) {
+        final Pattern hexLetterWord = Pattern.compile("^[aAbBcCdDeEfF]+$");
         String[] words = text.split(splitToken);
 
         for (int i = 0; i < words.length; i++) {
@@ -240,8 +255,8 @@ public class MainPanel extends JPanel {
                 continue;
             }
 
-            if (trimmedWord.equals("a")) {
-                notNumbers.add("a");
+            if (hexLetterWord.matcher(trimmedWord).matches()) {
+                notNumbers.add(trimmedWord);
                 continue;
             }
 
@@ -340,6 +355,71 @@ public class MainPanel extends JPanel {
 
     private interface MakeNumber {
         Optional<Long> apply(Function<String, Boolean> checkPrefix, int base, String input);
+    }
+
+
+
+    private static class ModernScrollBarUI extends BasicScrollBarUI {
+        private final ScrollPane scrollPane;
+
+        public ModernScrollBarUI(ScrollPane scrollPane) {
+            this.scrollPane = scrollPane;
+        }
+
+        @Override
+        protected JButton createDecreaseButton(int orientation) {
+            return new InvisibleScrollBarButton();
+        }
+
+        @Override
+        protected JButton createIncreaseButton(int orientation) {
+            return new InvisibleScrollBarButton();
+        }
+
+        @Override
+        protected void paintTrack(Graphics g, JComponent c, Rectangle trackBounds) {
+        }
+
+        @Override
+        protected void paintThumb(Graphics g, JComponent c, Rectangle thumbBounds) {
+            int alpha = isThumbRollover() ? SCROLL_BAR_ALPHA_ROLLOVER : SCROLL_BAR_ALPHA;
+            int orientation = scrollbar.getOrientation();
+            int x = thumbBounds.x;
+            int y = thumbBounds.y;
+
+            int width = orientation == JScrollBar.VERTICAL ? THUMB_SIZE : thumbBounds.width;
+            width = Math.max(width, THUMB_SIZE);
+
+            int height = orientation == JScrollBar.VERTICAL ? thumbBounds.height : THUMB_SIZE;
+            height = Math.max(height, THUMB_SIZE);
+
+            Graphics2D graphics2D = (Graphics2D) g.create();
+            graphics2D.setColor(new Color(THUMB_COLOR.getRed(), THUMB_COLOR.getGreen(), THUMB_COLOR.getBlue(), alpha));
+            graphics2D.fillRect(x, y, width, height);
+            graphics2D.dispose();
+        }
+
+        @Override
+        protected void setThumbBounds(int x, int y, int width, int height) {
+            super.setThumbBounds(x, y, width, height);
+            scrollPane.repaint();
+        }
+
+        /**
+         * Invisible Buttons, to hide scroll bar buttons.
+         */
+        private static class InvisibleScrollBarButton extends JButton {
+
+            private static final long serialVersionUID = 1552427919226628689L;
+
+            private InvisibleScrollBarButton() {
+                setOpaque(false);
+                setFocusable(false);
+                setFocusPainted(false);
+                setBorderPainted(false);
+                setBorder(BorderFactory.createEmptyBorder());
+            }
+        }
     }
 
 }
