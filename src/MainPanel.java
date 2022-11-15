@@ -204,6 +204,19 @@ public class MainPanel extends JPanel {
         this.add(changedTextWrapper, constraints);
     }
 
+    private static void setCorners(JScrollPane scrollPane) {
+        Supplier<JPanel> makeBlackCorner = () -> {
+            var corner = new JPanel();
+            corner.setBackground(Color.black);
+            return corner;
+        };
+
+        scrollPane.setCorner(ScrollPaneConstants.UPPER_LEFT_CORNER, makeBlackCorner.get());
+        scrollPane.setCorner(ScrollPaneConstants.UPPER_RIGHT_CORNER, makeBlackCorner.get());
+        scrollPane.setCorner(ScrollPaneConstants.LOWER_RIGHT_CORNER, makeBlackCorner.get());
+        scrollPane.setCorner(ScrollPaneConstants.LOWER_LEFT_CORNER, makeBlackCorner.get());
+    }
+
 
 
     private void offsetChanged(DocumentEvent event) {
@@ -349,21 +362,6 @@ public class MainPanel extends JPanel {
 
 
 
-    private static void setCorners(JScrollPane scrollPane) {
-        Supplier<JPanel> makeBlackCorner = () -> {
-            var corner = new JPanel();
-            corner.setBackground(Color.black);
-            return corner;
-        };
-
-        scrollPane.setCorner(ScrollPaneConstants.UPPER_LEFT_CORNER, makeBlackCorner.get());
-        scrollPane.setCorner(ScrollPaneConstants.UPPER_RIGHT_CORNER, makeBlackCorner.get());
-        scrollPane.setCorner(ScrollPaneConstants.LOWER_RIGHT_CORNER, makeBlackCorner.get());
-        scrollPane.setCorner(ScrollPaneConstants.LOWER_LEFT_CORNER, makeBlackCorner.get());
-    }
-
-
-
     private enum E_Literal {
         HEX,
         DEC,
@@ -374,8 +372,14 @@ public class MainPanel extends JPanel {
         Optional<Long> apply(Function<String, Boolean> checkPrefix, int base, String input);
     }
 
-
-
+    /**
+     * Based off of:
+     * <ul>
+     *     <li><a href="https://stackoverflow.com/a/53662678/13066845">Example code.</a></li>
+     *     <li><a href="https://stackoverflow.com/a/60584865/13066845">Explanation of what each method you should
+     *     override does.</a></li>
+     * </ul>
+     */
     private static class BlackScrollBarUI extends BasicScrollBarUI {
         private final JScrollPane scrollPane;
 
@@ -434,13 +438,15 @@ public class MainPanel extends JPanel {
 
 
         private JButton makeArrowButton(int orientation) {
-            var button = new JButton(switch (orientation) {
+            // Unicode Geometric Shapes table: http://www.unicode.org/charts/PDF/U25A0.pdf
+            String iconString = switch (orientation) {
                 case SwingConstants.NORTH -> "▲";
                 case SwingConstants.EAST -> "▶";
                 case SwingConstants.SOUTH -> "▼";
                 case SwingConstants.WEST -> "◀";
                 default -> throw new IllegalStateException("Unexpected value: " + orientation);
-            });
+            };
+            var button = new JButton(iconString);
 
             button.setForeground(Color.white);
             button.setBackground(Color.black);
@@ -455,7 +461,6 @@ public class MainPanel extends JPanel {
 
                 default -> throw new IllegalStateException("Unexpected value: " + orientation);
             };
-
             button.setBorder(new EmptyBorder(insert));
 
             return button;
