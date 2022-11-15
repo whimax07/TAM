@@ -1,4 +1,5 @@
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -17,6 +18,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 public class MainPanel extends JPanel {
@@ -26,11 +28,7 @@ public class MainPanel extends JPanel {
 
     private JButton exchangeClipboardButton;
 
-    private JScrollPane originalTextWrapper;
-
     private JTextArea originalTextBox;
-
-    private JScrollPane changedTextWrapper;
 
     private JTextArea changedTextBox;
 
@@ -169,10 +167,11 @@ public class MainPanel extends JPanel {
             }
         });
 
-        originalTextWrapper = new JScrollPane(originalTextBox);
+        JScrollPane originalTextWrapper = new JScrollPane(originalTextBox);
         originalTextWrapper.setBorder(new LineBorder(Color.WHITE, 2));
-        originalTextWrapper.getHorizontalScrollBar().setBackground(Color.darkGray);
-        var uis = originalTextWrapper.getHorizontalScrollBar().getUI();
+        originalTextWrapper.getHorizontalScrollBar().setUI(new BlackScrollBarUI(originalTextWrapper));
+        originalTextWrapper.getVerticalScrollBar().setUI(new BlackScrollBarUI(originalTextWrapper));
+        setCorners(originalTextWrapper);
 
         var constraints = new GridBagConstraints();
         constraints.fill = GridBagConstraints.BOTH;
@@ -191,8 +190,11 @@ public class MainPanel extends JPanel {
         changedTextBox.setFont(new Font("Courier New", Font.PLAIN, 16));
         changedTextBox.setEditable(false);
 
-        changedTextWrapper = new JScrollPane(changedTextBox);
+        JScrollPane changedTextWrapper = new JScrollPane(changedTextBox);
         changedTextWrapper.setBorder(new LineBorder(Color.WHITE, 2));
+        changedTextWrapper.getHorizontalScrollBar().setUI(new BlackScrollBarUI(changedTextWrapper));
+        changedTextWrapper.getVerticalScrollBar().setUI(new BlackScrollBarUI(changedTextWrapper));
+        setCorners(changedTextWrapper);
 
         var constraints = new GridBagConstraints();
         constraints.fill = GridBagConstraints.BOTH;
@@ -347,6 +349,21 @@ public class MainPanel extends JPanel {
 
 
 
+    private static void setCorners(JScrollPane scrollPane) {
+        Supplier<JPanel> makeBlackCorner = () -> {
+            var corner = new JPanel();
+            corner.setBackground(Color.black);
+            return corner;
+        };
+
+        scrollPane.setCorner(ScrollPaneConstants.UPPER_LEFT_CORNER, makeBlackCorner.get());
+        scrollPane.setCorner(ScrollPaneConstants.UPPER_RIGHT_CORNER, makeBlackCorner.get());
+        scrollPane.setCorner(ScrollPaneConstants.LOWER_RIGHT_CORNER, makeBlackCorner.get());
+        scrollPane.setCorner(ScrollPaneConstants.LOWER_LEFT_CORNER, makeBlackCorner.get());
+    }
+
+
+
     private enum E_Literal {
         HEX,
         DEC,
@@ -359,43 +376,53 @@ public class MainPanel extends JPanel {
 
 
 
-    private static class ModernScrollBarUI extends BasicScrollBarUI {
-        private final ScrollPane scrollPane;
+    private static class BlackScrollBarUI extends BasicScrollBarUI {
+        private final JScrollPane scrollPane;
 
-        public ModernScrollBarUI(ScrollPane scrollPane) {
+        private static final int SCROLL_BAR_ALPHA = 255;
+
+        private static final int SCROLL_BAR_ALPHA_ROLLOVER = 200;
+
+        private static final int BUTTON_INSERT = 5;
+
+        private static final Color THUMB_COLOUR = Color.darkGray;
+
+
+
+        public BlackScrollBarUI(JScrollPane scrollPane) {
             this.scrollPane = scrollPane;
         }
 
+
+
         @Override
         protected JButton createDecreaseButton(int orientation) {
-            return new InvisibleScrollBarButton();
+            return makeArrowButton(orientation);
         }
 
         @Override
         protected JButton createIncreaseButton(int orientation) {
-            return new InvisibleScrollBarButton();
+            return makeArrowButton(orientation);
         }
 
         @Override
         protected void paintTrack(Graphics g, JComponent c, Rectangle trackBounds) {
+            Graphics2D graphics2D = (Graphics2D) g.create();
+//            graphics2D.setColor(new Color(190, 190, 190));
+            graphics2D.setColor(Color.black);
+            graphics2D.fillRect(trackBounds.x, trackBounds.y, trackBounds.width, trackBounds.height);
+            graphics2D.dispose();
         }
 
         @Override
         protected void paintThumb(Graphics g, JComponent c, Rectangle thumbBounds) {
             int alpha = isThumbRollover() ? SCROLL_BAR_ALPHA_ROLLOVER : SCROLL_BAR_ALPHA;
-            int orientation = scrollbar.getOrientation();
-            int x = thumbBounds.x;
-            int y = thumbBounds.y;
-
-            int width = orientation == JScrollBar.VERTICAL ? THUMB_SIZE : thumbBounds.width;
-            width = Math.max(width, THUMB_SIZE);
-
-            int height = orientation == JScrollBar.VERTICAL ? thumbBounds.height : THUMB_SIZE;
-            height = Math.max(height, THUMB_SIZE);
 
             Graphics2D graphics2D = (Graphics2D) g.create();
-            graphics2D.setColor(new Color(THUMB_COLOR.getRed(), THUMB_COLOR.getGreen(), THUMB_COLOR.getBlue(), alpha));
-            graphics2D.fillRect(x, y, width, height);
+            graphics2D.setColor(
+                    new Color(THUMB_COLOUR.getRed(), THUMB_COLOUR.getGreen(), THUMB_COLOUR.getBlue(), alpha)
+            );
+            graphics2D.fillRect(thumbBounds.x, thumbBounds.y, thumbBounds.width, thumbBounds.height);
             graphics2D.dispose();
         }
 
@@ -405,21 +432,36 @@ public class MainPanel extends JPanel {
             scrollPane.repaint();
         }
 
-        /**
-         * Invisible Buttons, to hide scroll bar buttons.
-         */
-        private static class InvisibleScrollBarButton extends JButton {
 
-            private static final long serialVersionUID = 1552427919226628689L;
 
-            private InvisibleScrollBarButton() {
-                setOpaque(false);
-                setFocusable(false);
-                setFocusPainted(false);
-                setBorderPainted(false);
-                setBorder(BorderFactory.createEmptyBorder());
-            }
+        private JButton makeArrowButton(int orientation) {
+            var button = new JButton(switch (orientation) {
+                case SwingConstants.NORTH -> "▲";
+                case SwingConstants.EAST -> "▶";
+                case SwingConstants.SOUTH -> "▼";
+                case SwingConstants.WEST -> "◀";
+                default -> throw new IllegalStateException("Unexpected value: " + orientation);
+            });
+
+            button.setForeground(Color.white);
+            button.setBackground(Color.black);
+            button.setFocusable(false);
+
+            var insert = switch (orientation) {
+                case SwingConstants.NORTH, SwingConstants.SOUTH ->
+                        new Insets(BUTTON_INSERT, 0, BUTTON_INSERT, 0);
+
+                case SwingConstants.EAST, SwingConstants.WEST ->
+                        new Insets(0, BUTTON_INSERT, 0, BUTTON_INSERT);
+
+                default -> throw new IllegalStateException("Unexpected value: " + orientation);
+            };
+
+            button.setBorder(new EmptyBorder(insert));
+
+            return button;
         }
+
     }
 
 }
