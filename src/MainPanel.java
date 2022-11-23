@@ -275,11 +275,19 @@ public class MainPanel extends JPanel {
                 continue;
             }
 
+            // NOTE(Max): Suffix doesn't need to processed thought rewriteWord because the number is independent of the
+            //  full stop.
+            String suffix = "";
+            if (trimmedWord.endsWith(".")) {
+                suffix = ".";
+                trimmedWord = trimmedWord.substring(0, trimmedWord.length() - 1);
+            }
+
             var opNumber = getNumberFromWord(trimmedWord);
             if (opNumber.isEmpty()) continue;
 
             long number = opNumber.get() + offset;
-            words[i] = rewriteWord(words[i], number);
+            words[i] = rewriteWord(words[i], number) + suffix;
         }
 
         StringBuilder stringBuilder = new StringBuilder();
